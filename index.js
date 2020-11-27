@@ -1,16 +1,29 @@
 import * as THREE from 'three';
 import {scene, renderer, camera, runtime, world, physics, ui, app, appManager} from 'app';
 
-// const localVector = new THREE.Vector3();
-// const localMatrix = new THREE.Matrix4();
+const cellphoneCamera = new THREE.PerspectiveCamera();
+const rtWidth = 1024;
+const rtHeight = 1024;
+const renderTarget = new THREE.WebGLRenderTarget(rtWidth, rtHeight);
 
 (async () => {
-  const u = app.files['cellphone.glb'];
-  const transforms = physics.getRigTransforms();
-  const {position, quaternion} = transforms[0];
-  world.addObject(u, app.appId, position, quaternion); // XXX
+  const u = 'cellphone.glb';
+  const fileUrl = app.files['./' + u];
+  const res = await fetch(fileUrl);
+  const file = await res.blob();
+  file.name = u;
+  let mesh = await runtime.loadFile(file, {
+    optimize: false,
+  });
 
-  app.object.add(world);
+  mesh.add(cellphoneCamera);
+
+  const plane = new THREE.Mesh(new THREE.PlaneBufferGeometry(1, 1), new THREE.MeshBasicMaterial({
+    map: renderTarget.texture,
+  }));
+  mesh.add(plane);
+
+  app.object.add(mesh);
 
   let lastTimestamp = performance.now();
   renderer.setAnimationLoop((timestamp, frame) => {
@@ -18,6 +31,13 @@ import {scene, renderer, camera, runtime, world, physics, ui, app, appManager} f
     const timeDiff = Math.min((timestamp - lastTimestamp) / 1000, 0.05);
     lastTimestamp = timestamp;
     const now = Date.now();
+
+    plane.visible = false;
+    renderer.setRenderTarget(renderTarget);
+    renderer.clear();
+    renderer.render(scene, cellphoneCamera);
+    renderer.setRenderTarget(null);
+    plane.visible = true;
 
     /* closestWeapon = _getClosestWeapon();
     for (const weapon of weapons) {
