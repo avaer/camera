@@ -2,9 +2,26 @@ import * as THREE from 'three';
 import {scene, renderer, camera, runtime, world, physics, ui, app, appManager} from 'app';
 
 const cellphoneCamera = new THREE.PerspectiveCamera();
-const rtWidth = 1024;
-const rtHeight = 1024;
+const rtWidth = 512;
+const rtHeight = 512;
 const renderTarget = new THREE.WebGLRenderTarget(rtWidth, rtHeight);
+
+const canvas = document.createElement('canvas');
+canvas.width = rtWidth;
+canvas.height = rtHeight;
+const ctx = canvas.getContext('2d');
+const imageData = ctx.createImageData(canvas.width, canvas.height);
+const captureStream = canvas.captureStream();
+const mediaRecorder = new MediaRecorder(captureStream, { mimeType: "video/webm; codecs=vp9" });
+const recordedChunks = [];
+mediaRecorder.ondataavailable = e => {
+  if (event.data.size > 0) {
+    recordedChunks.push(event.data);
+    console.log('got data', event.data.size);
+    // download();
+  }
+};
+mediaRecorder.start();
 
 (async () => {
   const u = 'cellphone.glb';
@@ -38,6 +55,11 @@ const renderTarget = new THREE.WebGLRenderTarget(rtWidth, rtHeight);
     renderer.render(scene, cellphoneCamera);
     renderer.setRenderTarget(null);
     plane.visible = true;
+
+    renderer.readRenderTargetPixels(renderTarget, 0, 0, imageData.width, imageData.height, imageData.data);
+    ctx.putImageData(imageData, 0, 0);
+
+    mediaRecorder.requestData();
 
     /* closestWeapon = _getClosestWeapon();
     for (const weapon of weapons) {
