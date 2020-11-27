@@ -21,7 +21,7 @@ const _start = () => {
   mediaRecorder.ondataavailable = e => {
     if (event.data.size > 0) {
       recordedChunks.push(event.data);
-      console.log('got data', event.data.size, totalSize/*, maxSize*/);
+      console.log('got data', event.data.size/*, totalSize, maxSize*/);
       /* totalSize += event.data.size;
       if (totalSize >= maxSize && mediaRecorder.state === 'recording') {
         mediaRecorder.stop();
