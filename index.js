@@ -13,33 +13,47 @@ const ctx = canvas.getContext('2d');
 const imageData = ctx.createImageData(canvas.width, canvas.height);
 const captureStream = canvas.captureStream();
 const mediaRecorder = new MediaRecorder(captureStream, { mimeType: "video/webm; codecs=vp9" });
+
 const recordedChunks = [];
-let totalSize = 0;
-const maxSize = 200 * 1024;
-mediaRecorder.ondataavailable = e => {
-  if (event.data.size > 0) {
-    recordedChunks.push(event.data);
-    console.log('got data', event.data.size, totalSize, maxSize);
-    totalSize += event.data.size;
-    if (totalSize >= maxSize && mediaRecorder.state === 'recording') {
-      mediaRecorder.stop();
+// let totalSize = 0;
+// const maxSize = 200 * 1024;
+const _start = () => {
+  mediaRecorder.ondataavailable = e => {
+    if (event.data.size > 0) {
+      recordedChunks.push(event.data);
+      console.log('got data', event.data.size, totalSize/*, maxSize*/);
+      /* totalSize += event.data.size;
+      if (totalSize >= maxSize && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+      } */
     }
+  };
+  mediaRecorder.onstop = async e => {
+    const blob = new Blob(recordedChunks, {
+      type: 'video/webm',
+    });
+    blob.name = 'capture.webm';
+
+    recordedChunks.length = 0;
+    // totalSize = 0;
+
+    const token = await crypto.mintToken(blob, {
+      description: 'captured video',
+    });
+    console.log('got token', token);
+  };
+  mediaRecorder.start();
+};
+const _stop = () => {
+  mediaRecorder.stop();
+};
+/* const _toggle = () => {
+  if (mediaRecorder.state === 'inactive') {
+    _start();
+  } else {
+    _stop();
   }
-};
-mediaRecorder.onstop = async e => {
-  const blob = new Blob(recordedChunks, {
-    type: 'video/webm',
-  });
-  blob.name = 'capture.webm';
-
-  recordedChunks.length = 0;
-
-  const token = await crypto.mintToken(blob, {
-    description: 'captured video',
-  });
-  console.log('got token', token);
-};
-mediaRecorder.start();
+}; */
 
 (async () => {
   const u = 'cellphone.glb';
@@ -61,24 +75,36 @@ mediaRecorder.start();
   app.object.add(mesh);
 
   let lastTimestamp = performance.now();
+  let lastGrabbed = false;
   renderer.setAnimationLoop((timestamp, frame) => {
     timestamp = timestamp || performance.now();
     const timeDiff = Math.min((timestamp - lastTimestamp) / 1000, 0.05);
     lastTimestamp = timestamp;
     const now = Date.now();
 
-    plane.visible = false;
-    renderer.setRenderTarget(renderTarget);
-    renderer.clear();
-    renderer.render(scene, cellphoneCamera);
-    renderer.setRenderTarget(null);
-    plane.visible = true;
+    const currentWeapon = world.getGrab('right');
+    const grabbed = currentWeapon === app.object;
+    if (grabbed && !lastGrabbed) {
+      _start();
+    } else if (lastGrabbed && !grabbed) {
+      _stop();
+    }
+    lastGrabbed = grabbed;
 
-    renderer.readRenderTargetPixels(renderTarget, 0, 0, imageData.width, imageData.height, imageData.data);
-    ctx.putImageData(imageData, 0, 0);
+    {
+      plane.visible = false;
+      renderer.setRenderTarget(renderTarget);
+      renderer.clear();
+      renderer.render(scene, cellphoneCamera);
+      renderer.setRenderTarget(null);
+      plane.visible = true;
 
-    if (mediaRecorder.state === 'recording') {
-      mediaRecorder.requestData();
+      renderer.readRenderTargetPixels(renderTarget, 0, 0, imageData.width, imageData.height, imageData.data);
+      ctx.putImageData(imageData, 0, 0);
+
+      if (mediaRecorder.state === 'recording') {
+        mediaRecorder.requestData();
+      }
     }
 
     /* closestWeapon = _getClosestWeapon();
