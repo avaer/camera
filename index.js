@@ -34,7 +34,9 @@ mediaRecorder.onstop = async e => {
 
   recordedChunks.length = 0;
 
-  const token = await crypto.mintToken(blob);
+  const token = await crypto.mintToken(blob, {
+    description: 'captured video',
+  });
   console.log('got token', token);
 };
 mediaRecorder.start();
