@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {scene, renderer, camera, runtime, world, physics, ui, app, appManager} from 'app';
+import {scene, renderer, camera, runtime, world, physics, ui, crypto, app, appManager} from 'app';
 
 const cellphoneCamera = new THREE.PerspectiveCamera();
 const rtWidth = 512;
@@ -14,12 +14,28 @@ const imageData = ctx.createImageData(canvas.width, canvas.height);
 const captureStream = canvas.captureStream();
 const mediaRecorder = new MediaRecorder(captureStream, { mimeType: "video/webm; codecs=vp9" });
 const recordedChunks = [];
+let totalSize = 0;
+const maxSize = 200 * 1024;
 mediaRecorder.ondataavailable = e => {
   if (event.data.size > 0) {
     recordedChunks.push(event.data);
-    console.log('got data', event.data.size);
-    // download();
+    console.log('got data', event.data.size, totalSize, maxSize);
+    totalSize += event.data.size;
+    if (totalSize >= maxSize && mediaRecorder.state === 'recording') {
+      mediaRecorder.stop();
+    }
   }
+};
+mediaRecorder.onstop = async e => {
+  const blob = new Blob(recordedChunks, {
+    type: 'video/webm',
+  });
+  blob.name = 'capture.webm';
+
+  recordedChunks.length = 0;
+
+  const token = await crypto.mintToken(blob);
+  console.log('got token', token);
 };
 mediaRecorder.start();
 
@@ -59,7 +75,9 @@ mediaRecorder.start();
     renderer.readRenderTargetPixels(renderTarget, 0, 0, imageData.width, imageData.height, imageData.data);
     ctx.putImageData(imageData, 0, 0);
 
-    mediaRecorder.requestData();
+    if (mediaRecorder.state === 'recording') {
+      mediaRecorder.requestData();
+    }
 
     /* closestWeapon = _getClosestWeapon();
     for (const weapon of weapons) {
