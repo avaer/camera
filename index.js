@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {scene, renderer, camera, runtime, world, physics, ui, crypto, app, appManager} from 'app';
+import {scene, renderer, camera, runtime, physics, ui, crypto, app, appManager} from 'app';
 
 const cellphoneCamera = new THREE.PerspectiveCamera();
 const rtWidth = 512;
@@ -82,7 +82,7 @@ const _stop = () => {
     lastTimestamp = timestamp;
     const now = Date.now();
 
-    const currentWeapon = world.getGrab('right');
+    const currentWeapon = appManager.getGrab('right');
     const grabbed = currentWeapon === app.object;
     if (grabbed && !lastGrabbed) {
       _start();
