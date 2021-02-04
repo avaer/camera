@@ -4,7 +4,13 @@ import {scene, renderer, camera, runtime, physics, ui, crypto, app, appManager} 
 const cellphoneCamera = new THREE.PerspectiveCamera();
 const rtWidth = 512;
 const rtHeight = 512;
-const renderTarget = new THREE.WebGLRenderTarget(rtWidth, rtHeight);
+const renderTarget = new THREE.WebGLRenderTarget(rtWidth, rtHeight, {
+  minFilter: THREE.LinearFilter,
+  magFilter: THREE.LinearFilter,
+  // format: THREE.RGBFormat,
+  stencilBuffer: false,
+  encoding: THREE.sRGBEncoding,
+});
 
 const canvas = document.createElement('canvas');
 canvas.width = rtWidth;
